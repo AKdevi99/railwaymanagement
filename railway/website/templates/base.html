@@ -13,7 +13,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
         body {
-            background-image: url('website/static/back2.jpeg');
+            background-image: url("{{ url_for('static', filename='back2.jpeg') }}");
             background-repeat: no-repeat;
             background-size: cover;
             font-family: sans-serif;

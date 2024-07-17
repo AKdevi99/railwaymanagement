@@ -1,8 +1,9 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from .models import User
-from werkzeug.security import generate_password_hash, check_password_hash
 from .database import db
 from flask_login import login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+import hashlib
 
 auth = Blueprint('auth', __name__)
 
@@ -14,7 +15,9 @@ def login():
 
         user = User.query.filter_by(username=username).first()
         if user:
-            if check_password_hash(user.password, password):
+            # Use the same SHA256 hash method to check the password
+            hashed_password = hashlib.sha256(password.encode()).hexdigest()
+            if user.password == hashed_password:
                 flash('Logged in successfully!', category='success')
                 login_user(user, remember=True)
                 return redirect(url_for('views.home'))
@@ -24,7 +27,6 @@ def login():
             flash('Username does not exist.', category='error')
 
     return render_template("login.html", user=current_user)
-
 @auth.route('/logout')
 @login_required
 def logout():
@@ -52,7 +54,9 @@ def sign_up():
         elif len(password1) < 7:
             flash('Password must be at least 7 characters.', category='error')
         else:
-            new_user = User(name=name, age=age, gender=gender, contact=contact, username=username,password=password1)
+            # Use a simple SHA256 hash instead of Werkzeug's generate_password_hash
+            hashed_password = hashlib.sha256(password1.encode()).hexdigest()
+            new_user = User(name=name, age=age, gender=gender, contact=contact, username=username, password=hashed_password)
             db.session.add(new_user)
             db.session.commit()
             login_user(new_user, remember=True)

@@ -4,7 +4,6 @@ from os import path
 from flask_login import LoginManager
 from .database import db
 
-
 DB_NAME = "railway.db"
 
 def create_app():
@@ -21,7 +20,10 @@ def create_app():
 
     from .models import User, Train, Station, Route, Passenger, Ticket, Booking
 
-    create_database(app)
+    with app.app_context():
+        create_database()
+        update_database_schema()
+        add_initial_data()
 
     login_manager = LoginManager()
     login_manager.login_view = 'auth.login'
@@ -33,11 +35,22 @@ def create_app():
 
     return app
 
-def create_database(app):
+def create_database():
     if not path.exists('website/' + DB_NAME):
-        with app.app_context():
-            db.create_all()
+        db.create_all()
         print('Created Database!')
+
+def update_database_schema():
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+    if 'route' in inspector.get_table_names():
+        columns = [column['name'] for column in inspector.get_columns('route')]
+        if 'train_id' not in columns:
+            with db.engine.connect() as connection:
+                connection.execute(text('ALTER TABLE route ADD COLUMN train_id INTEGER REFERENCES train(train_id)'))
+                connection.commit()
+            print('Updated Route table with train_id column')
 
 def add_initial_data():
     from .models import Train, Station, Route
@@ -73,3 +86,4 @@ def add_initial_data():
         db.session.add_all(routes)
 
     db.session.commit()
+    print('Added initial data!')
